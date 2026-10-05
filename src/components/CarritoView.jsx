@@ -9,7 +9,8 @@ import {
   ShoppingBag,
   Sparkles,
   CheckCircle2,
-  PackageCheck
+  PackageCheck,
+  RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -19,35 +20,53 @@ export default function CarritoView() {
     updateCartQuantity,
     removeFromCart,
     clearCart,
+    checkoutCart,
     cartTotalPrice,
     cartTotalItems,
     navigateTo
   } = useShop();
 
   const [checkoutModal, setCheckoutModal] = useState(false);
+  const [lastOrderId, setLastOrderId] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleFinalizarCompra = () => {
-    // Launch confetti celebration
+  const handleFinalizarCompra = async () => {
+    if (cart.length === 0) return;
+    setIsSubmitting(true);
     try {
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.6 }
-      });
-    } catch (e) {
-      // fallback if canvas not available
-    }
+      // Launch confetti animation
+      try {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      } catch (e) {
+        // fallback if canvas not available
+      }
 
-    setCheckoutModal(true);
+      // Call API order creation & cart clearance via context
+      const nuevoPedido = await checkoutCart();
+      if (nuevoPedido && nuevoPedido.id) {
+        setLastOrderId(nuevoPedido.id);
+      } else {
+        setLastOrderId(`ORD-2026-${Math.floor(Math.random() * 9000) + 1000}`);
+      }
+
+      setCheckoutModal(true);
+    } catch (err) {
+      console.error('Error al completar checkout:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCloseCheckoutModal = () => {
     setCheckoutModal(false);
-    clearCart();
     navigateTo('cuenta');
   };
 
-  if (cart.length === 0) {
+  if (cart.length === 0 && !checkoutModal) {
     return (
       <div className="cart-page-wrapper">
         {/* Navigation Bar */}
@@ -99,14 +118,15 @@ export default function CarritoView() {
         {/* Left: Added Stickers List */}
         <div className="cart-items-card">
           {cart.map(({ stickerId, quantity, sticker }) => {
-            const subtotal = sticker.precio_final * quantity;
+            const precioUnitario = sticker?.precio_final || 0;
+            const subtotal = precioUnitario * quantity;
 
             return (
               <div key={stickerId} className="cart-item-row">
                 {/* Thumbnail Image */}
                 <img
-                  src={sticker.image_url}
-                  alt={sticker.nombre}
+                  src={sticker?.image_url}
+                  alt={sticker?.nombre || 'Sticker'}
                   className="cart-item-img"
                   onClick={() => navigateTo('producto', stickerId)}
                   style={{ cursor: 'pointer' }}
@@ -114,16 +134,16 @@ export default function CarritoView() {
 
                 {/* Info */}
                 <div className="cart-item-info">
-                  <span className="cart-item-category">{sticker.categoria}</span>
+                  <span className="cart-item-category">{sticker?.categoria || 'Kawaii'}</span>
                   <span
                     className="cart-item-name"
                     onClick={() => navigateTo('producto', stickerId)}
                     style={{ cursor: 'pointer' }}
                   >
-                    {sticker.nombre}
+                    {sticker?.nombre || 'Sticker'}
                   </span>
                   <span className="cart-item-price">
-                    Precio unitario: ${sticker.precio_final.toLocaleString('es-AR')}
+                    Precio unitario: ${precioUnitario.toLocaleString('es-AR')}
                   </span>
                 </div>
 
@@ -190,9 +210,22 @@ export default function CarritoView() {
             </span>
           </div>
 
-          <button className="btn-checkout" onClick={handleFinalizarCompra}>
-            <PackageCheck size={22} />
-            Finalizar compra
+          <button
+            className="btn-checkout"
+            onClick={handleFinalizarCompra}
+            disabled={isSubmitting || cart.length === 0}
+          >
+            {isSubmitting ? (
+              <>
+                <RefreshCw size={20} style={{ animation: 'spin 1s linear infinite' }} />
+                Procesando pedido...
+              </>
+            ) : (
+              <>
+                <PackageCheck size={22} />
+                Finalizar compra
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -206,10 +239,10 @@ export default function CarritoView() {
             </div>
             <h2 className="modal-title">¡Compra realizada con éxito! ✨</h2>
             <p className="modal-body">
-              ¡Muchas gracias por tu compra en <strong>mood Sticker</strong>! Tu pedido fue registrado y ya lo estamos preparando con mucho amor y regalitos extra.
+              ¡Muchas gracias por tu compra en <strong>mood Sticker</strong>! Tu pedido fue enviado a la API y ya lo estamos preparando con mucho amor.
             </p>
             <div style={{ background: '#FAF8FD', padding: '16px', borderRadius: '16px', marginBottom: '20px', textAlign: 'left', fontSize: '14px' }}>
-              <div><strong>Nº de Pedido:</strong> ORD-2026-{(Math.floor(Math.random() * 9000) + 1000)}</div>
+              <div><strong>Nº de Pedido:</strong> {lastOrderId}</div>
               <div><strong>Total abonado:</strong> ${cartTotalPrice.toLocaleString('es-AR')}</div>
               <div><strong>Estado:</strong> En preparación 📦</div>
             </div>

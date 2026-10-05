@@ -10,13 +10,32 @@ import {
   Sparkles,
   CheckCircle2,
   Heart,
-  Droplet
+  Droplet,
+  RefreshCw
 } from 'lucide-react';
 
 export default function ProductoView() {
-  const { currentSticker, addToCart, navigateTo, favorites, toggleFavorite } = useShop();
+  const { currentSticker, loading, addToCart, navigateTo, favorites, toggleFavorite } = useShop();
   const [quantity, setQuantity] = useState(1);
   const [addedSuccess, setAddedSuccess] = useState(false);
+
+  if (loading || !currentSticker) {
+    return (
+      <div className="product-detail-container">
+        <div className="detail-nav-header">
+          <button className="back-link-btn" onClick={() => navigateTo('catalogo')}>
+            <ArrowLeft size={18} /> Volver al catálogo
+          </button>
+        </div>
+        <div style={{ textAlign: 'center', padding: '80px 20px', background: 'white', borderRadius: '32px', boxShadow: '0 10px 30px rgba(0,0,0,0.03)' }}>
+          <RefreshCw size={36} style={{ animation: 'spin 1.5s linear infinite', color: 'var(--purple-primary)', marginBottom: '16px' }} />
+          <p style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>
+            Cargando sticker desde la API... ✨
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const isFav = favorites.includes(currentSticker.id);
 
@@ -27,6 +46,11 @@ export default function ProductoView() {
       setAddedSuccess(false);
     }, 4000);
   };
+
+  const precioFinal = currentSticker.precio_final || 0;
+  const cuotasCantidad = currentSticker.cuotas_cantidad || 3;
+  const cuotasValor = currentSticker.cuotas_valor || Math.round(precioFinal / cuotasCantidad);
+  const garantiaMeses = currentSticker.garantia_meses || 6;
 
   return (
     <div className="product-detail-container">
@@ -68,13 +92,17 @@ export default function ProductoView() {
             className="detail-large-img"
           />
 
-          <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--purple-primary)', background: 'white', padding: '6px 14px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-              ✨ Finish: {currentSticker.acabado}
-            </span>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)', background: 'white', padding: '6px 14px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-              📏 Tamaño: {currentSticker.tamano}
-            </span>
+          <div style={{ marginTop: '20px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {currentSticker.acabado && (
+              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--purple-primary)', background: 'white', padding: '6px 14px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                ✨ Finish: {currentSticker.acabado}
+              </span>
+            )}
+            {currentSticker.tamano && (
+              <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-secondary)', background: 'white', padding: '6px 14px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                📏 Tamaño: {currentSticker.tamano}
+              </span>
+            )}
           </div>
         </div>
 
@@ -84,7 +112,7 @@ export default function ProductoView() {
           <div className="detail-badge-group">
             <span className="detail-category-badge">{currentSticker.categoria}</span>
             <span className="detail-garantia-badge">
-              <ShieldCheck size={16} /> Garantía: {currentSticker.garantia_meses} meses
+              <ShieldCheck size={16} /> Garantía: {garantiaMeses} meses
             </span>
           </div>
 
@@ -98,15 +126,15 @@ export default function ProductoView() {
                 Precio Final
               </span>
               <span className="detail-final-price">
-                ${currentSticker.precio_final.toLocaleString('es-AR')}
+                ${precioFinal.toLocaleString('es-AR')}
               </span>
             </div>
             <div className="detail-cuotas-info">
               <CreditCard size={18} style={{ verticalAlign: 'middle', marginRight: '4px', color: 'var(--purple-primary)' }} />
               <span>
-                {currentSticker.cuotas_cantidad} cuotas sin interés de{' '}
+                {cuotasCantidad} cuotas sin interés de{' '}
                 <strong style={{ color: 'var(--purple-primary)' }}>
-                  ${currentSticker.cuotas_valor.toLocaleString('es-AR')}
+                  ${cuotasValor.toLocaleString('es-AR')}
                 </strong>
               </span>
             </div>
@@ -124,10 +152,10 @@ export default function ProductoView() {
               <Sparkles size={18} /> Vinilo troquelado premium
             </div>
             <div className="spec-item">
-              <ShieldCheck size={18} /> Garantía oficial de {currentSticker.garantia_meses} meses
+              <ShieldCheck size={18} /> Garantía oficial de {garantiaMeses} meses
             </div>
             <div className="spec-item">
-              <CreditCard size={18} /> {currentSticker.cuotas_cantidad} cuotas de ${currentSticker.cuotas_valor}
+              <CreditCard size={18} /> {cuotasCantidad} cuotas de ${cuotasValor.toLocaleString('es-AR')}
             </div>
           </div>
 

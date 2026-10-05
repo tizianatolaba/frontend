@@ -1,20 +1,79 @@
 import React, { useState } from 'react';
 import { useShop } from '../context/ShopContext';
 import { CATEGORIAS } from '../data/stickersData';
-import { Heart, ShoppingCart, Sparkles, Star, Search } from 'lucide-react';
+import { Heart, ShoppingCart, Sparkles, Star, Search, RefreshCw, AlertTriangle } from 'lucide-react';
 
 export default function CatalogoView() {
-  const { stickers, navigateTo, addToCart, favorites, toggleFavorite } = useShop();
+  const { stickers, loading, error, fetchCatalogo, navigateTo, addToCart, favorites, toggleFavorite } = useShop();
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Extract categories dynamically or use static list
+  const availableCategories = CATEGORIAS || [
+    'Todos',
+    ...Array.from(new Set(stickers.map(s => s.categoria).filter(Boolean)))
+  ];
 
   // Filter logic
   const filteredStickers = stickers.filter(sticker => {
     const matchesCategory = selectedCategory === 'Todos' || sticker.categoria === selectedCategory;
-    const matchesSearch = sticker.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          sticker.descripcion.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      (sticker.nombre || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (sticker.descripcion || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  if (loading) {
+    return (
+      <div className="catalogo-wrapper">
+        <div className="hero-banner">
+          <div className="hero-text">
+            <div className="hero-tag">
+              <Sparkles size={14} /> Nueva Colección Pastel 2026
+            </div>
+            <h1 className="hero-title">
+              Expresá tu <span>mood</span> con los stickers más irresistibles
+            </h1>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '18px', fontWeight: '700', color: 'var(--purple-primary)' }}>
+            <RefreshCw size={24} style={{ animation: 'spin 1.5s linear infinite' }} />
+            Cargando stickers desde la API...
+          </div>
+          <div className="sticker-grid" style={{ marginTop: '30px' }}>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={i} className="sticker-card" style={{ opacity: 0.7, pointerEvents: 'none' }}>
+                <div className="card-img-wrapper" style={{ background: '#f5f3ff', height: '180px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Sparkles size={32} style={{ color: 'var(--purple-primary)', opacity: 0.5 }} />
+                </div>
+                <div style={{ background: '#e0e0e0', height: '14px', width: '50%', margin: '12px 0 6px', borderRadius: '8px' }} />
+                <div style={{ background: '#eee', height: '20px', width: '80%', marginBottom: '16px', borderRadius: '8px' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="catalogo-wrapper">
+        <div className="empty-cart-card" style={{ border: '2px dashed #FF70A6', marginTop: '40px' }}>
+          <div className="empty-cart-icon" style={{ background: '#FFEBEB', color: '#FF4949' }}>
+            <AlertTriangle size={44} />
+          </div>
+          <h2 className="empty-cart-title">No pudimos conectar con el servidor</h2>
+          <p className="empty-cart-desc">{error}</p>
+          <button className="btn-add-main" style={{ maxWidth: '240px' }} onClick={() => fetchCatalogo()}>
+            <RefreshCw size={18} /> Reintentar conexión
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="catalogo-wrapper">
@@ -63,7 +122,7 @@ export default function CatalogoView() {
 
         {/* Category Chips */}
         <div className="filter-bar" style={{ marginBottom: 0 }}>
-          {CATEGORIAS.map(cat => (
+          {availableCategories.map(cat => (
             <button
               key={cat}
               className={`filter-chip ${selectedCategory === cat ? 'active' : ''}`}
@@ -87,12 +146,14 @@ export default function CatalogoView() {
               onClick={() => navigateTo('producto', sticker.id)}
             >
               {/* Badge Tag */}
-              <span
-                className="card-badge-tag"
-                style={{ backgroundColor: sticker.color_badge }}
-              >
-                {sticker.tag}
-              </span>
+              {sticker.tag && (
+                <span
+                  className="card-badge-tag"
+                  style={{ backgroundColor: sticker.color_badge || '#FF70A6' }}
+                >
+                  {sticker.tag}
+                </span>
+              )}
 
               {/* Heart Favorite Toggle Button */}
               <button
@@ -125,10 +186,10 @@ export default function CatalogoView() {
                 <div className="card-price-block">
                   <span className="card-price-label">Precio Final</span>
                   <span className="card-price-amount">
-                    ${sticker.precio_final.toLocaleString('es-AR')}
+                    ${(sticker.precio_final || 0).toLocaleString('es-AR')}
                   </span>
                   <span className="card-installments">
-                    {sticker.cuotas_cantidad} cuotas de ${sticker.cuotas_valor.toLocaleString('es-AR')}
+                    {sticker.cuotas_cantidad || 3} cuotas de ${(sticker.cuotas_valor || 0).toLocaleString('es-AR')}
                   </span>
                 </div>
 
